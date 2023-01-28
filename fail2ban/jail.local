@@ -1,0 +1,37 @@
+[DEFAULT]
+ignoreip = 127.0.0.1/8 ::1 200.204.160.206 200.49.34.48/29 189.126.200.240/28 200.155.163.48/29 200.201.138.240/28 18.231.140.201 189.19.223.154 179.110.69.59 djchacalap.ddns.net
+bantime = 1d
+findtime = 10m
+maxretry = 3
+chain = INPUT
+protocol = all
+port = 0:65535
+banaction = iptables-multiport
+banaction_allports = iptables-allports
+action_ = %(banaction_allports)s[name=%(__name__)s, bantime="%(bantime)s", port="%(port)s", protocol="%(protocol)s", chain="%(chain)s"]
+action_mw = %(banaction_allports)s[name=%(__name__)s, bantime="%(bantime)s", port="%(port)s", protocol="%(protocol)s", chain="%(chain)s"]
+            %(mta)s-whois[name=%(__name__)s, sender="%(sender)s", dest="%(destemail)s", protocol="%(protocol)s", chain="%(chain)s"]
+
+action = %(action_)s
+          banned_db[name=%(__name__)s, port="%(port)s", protocol="%(protocol)s"]
+#destemail = alessandro@agecomnet.com.br
+#sender = monitor@agecomnet.com.br
+
+[sshd]
+enabled = true
+filter = sshd
+logpath = /var/log/secure
+#action = iptables-allports[name=ssh, protocol=all]
+
+[freepbx]
+enabled = false
+filter = freepbx
+#action = iptables-allports[name=SIP, protocol=all]
+logpath = /var/log/asterisk/freepbx_security.log
+maxretry = 2
+
+[asterisk]
+
+enable = false
+logpath  = /var/log/asterisk/security
+maxretry = 4
