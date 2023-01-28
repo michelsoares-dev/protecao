@@ -26,10 +26,11 @@ installmonitor()
 	cd -
 
 }
-configfreepbx()
+configfreepbxf2b()
 {
+read -p "Digite a senha do MYSQL? " internetshare
 	/usr/sbin/fwconsole ma downloadinstall logfiles
-	/usr/bin/mysql -pAgecom20402040 asterisk << EOF
+	/usr/bin/mysql -p$mysqlpass asterisk << EOF
 INSERT logfile_logfiles (name,permanent,readonly,disabled,debug,dtmf,error,fax,notice,verbose,warning,security) values ('security','0','0','0','off','off','off','off','off','off','off','on');
 EOF
 /usr/sbin/fwconsole r
@@ -120,6 +121,15 @@ setiptablesfile()
 }
 configfail2ban()
 {
+	while true; do
+                read -p "Configurar FreePBX para Fail2Ban? " ff2b
+                case $ff2b in
+                        [SsYy]* ) configfreepbxf2b; break;;
+                        [Nn]* ) echo -e "Pulando configuracao FreePBX"; break;;
+                        * ) echo "RESPONDA sim ou nao.";;
+                esac
+        done
+
 	rm -Rf /etc/fail2ban
 	cp -Rf ./fail2ban /etc
 	echo -e "# - Store banned IP in SQL db while it's banned." > /etc/fail2ban/action.d/banned_db.conf
@@ -180,14 +190,6 @@ configiptables()
 		[SsYy]* ) setiptablesfile 1; break;;
 		[Nn]* ) setiptablesfile 0; break;;
 	esac
-	while true; do
-		read -p "Configurar FreePBX para Fail2Ban? " ff2b
-		case $ff2b in
-			[SsYy]* ) configfreepbx; break;;
-			[Nn]* ) echo -e "Pulando configuracao FreePBX"; break;;
-			* ) echo "RESPONDA sim ou nao.";;
-		esac
-	done
 }
 RED='\033[0;31m'
 NC='\033[0m' # No Color
