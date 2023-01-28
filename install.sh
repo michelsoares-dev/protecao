@@ -11,7 +11,15 @@ usage() {
 	echo "Use: $0 monitor             Instala o monitor de clientes."
         echo "Use: $0 installdeps         Instalar os pacotes necessarios."
 }
-
+installdeps()
+{
+	yum -y install epel-release
+	yum -y install fail2ban fail2ban-systemd
+	yum -y install GeoIP GeoIP-data GeoIP-GeoLite-data
+	yum -y install iptables-services
+	systemctl disable firewalld
+	systemctl stop firewalld
+}
 configfreepbx()
 {
         /usr/sbin/fwconsole ma downloadinstall logfiles
@@ -170,8 +178,8 @@ case "$1" in
 iptables)
         configiptables
         ;;
-install)
-        testcmd=''
+installdeps)
+        installdeps
         ;;
 install-unpackaged)
         unpackaged="yes"
