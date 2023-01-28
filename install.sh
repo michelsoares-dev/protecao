@@ -3,13 +3,70 @@ set -e
 
 usage() {
 	echo "$0: configura e instala as dependencias de seguranca e monitoria"
-	echo 'Revision: $Id$'
+	echo 'Revision: 001'
 	echo ""
 	echo "Use: $0:                    Mostrar esta mensagem."
+	echo "Use: $0 sysprep             Prepara o sistema para instalacao do IPBX"
 	echo "Use: $0 iptables            Configurar o iptables."
 	echo "Use: $0 fail2ban            Configurar o fail2ban."
 	echo "Use: $0 monitor             Instala o monitor de clientes."
-	echo "Use: $0 installdeps         Instalar os pacotes necessarios."
+	echo "Use: $0 installdeps         Instalar os pacotes necessarios para fail2ban."
+}
+configrepomariadb()
+{
+	echo -e "# MariaDB 10.8 CentOS repository list - created 2023-01-28 15:43 UTC
+	# https://mariadb.org/download/
+	[mariadb]
+	name = MariaDB
+	baseurl = https://mirrors.gigenet.com/mariadb/yum/10.8/centos8-amd64
+	module_hotfixes=1
+	gpgkey=https://mirrors.gigenet.com/mariadb/yum/RPM-GPG-KEY-MariaDB
+	gpgcheck=1" > /etc/yum.repos.d/MariaDB.repo
+}
+sysprep()
+{
+	sed -i 's/\(^SELINUX=\).*/\SELINUX=disabled/' /etc/sysconfig/selinux
+	sed -i 's/\(^SELINUX=\).*/\SELINUX=disabled/' /etc/selinux/config
+	configrepomariadb
+	dnf -y upgrade
+	timedatectl set-timezone America/Sao_Paulo
+	systemctl stop firewalld
+	chkconfig firewalld off
+	yum remove firewalld -y
+	yum -y install epel-release
+	yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+	yum config-manager --set-enabled powertools
+	yum -y install lynx tftp-server unixODBC mariadb-server mariadb mariadb-connector-odbc httpd ncurses-devel sendmail sendmail-cf newt-devel libxml2-devel unixODBC-devel libcurl-devel libogg-devel libvorbis-devel libtiff-devel gtk2-devel subversion git wget vim uuid-devel sqlite-devel net-tools gnutls-devel texinfo libuuid-devel libedit-devel tar crontabs gcc gcc-c++ openssl-devel libtool-ltdl-devel mysql-devel libsrtp-devel libxslt-devel kernel-devel libtermcap-devel fail2ban libtiff-tools postfix mod_ssl nodejs
+	dnf -y remove php*
+	dnf -y install https://rpms.remirepo.net/enterprise/remi-release-8.rpm
+	dnf -y module disable php
+	dnf -y module enable php:remi-7.4
+	dnf install -y php php-pdo php-mysqlnd php-mbstring php-pear php-process php-xml php-opcache php-ldap php-intl php-soap php-json
+	dnf install -y https://dev.mysql.com/get/Downloads/Connector-ODBC/8.0/mysql-connector-odbc-8.0.32-1.el8.x86_64.rpm
+	dnf install https://rpmfind.net/linux/centos/8-stream/AppStream/x86_64/os/Packages/mariadb-connector-odbc-3.1.12-1.el8.x86_64.rpm
+	dnf -y install https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm
+	dnf -y install https://forensics.cert.org/cert-forensics-tools-release-el8.rpm
+
+	systemctl stop firewalld
+	systemctl disable firewalld
+
+	sed -i 's/\/lib\/libmyodbc5.so/\/lib64\/libmyodbc8a.so/' /etc/odbcinst.ini
+	sed -i 's/\/lib64\/libmyodbc5.so/\/lib64\/libmyodbc8a.so/' /etc/odbcinst.ini
+	dnf -y install ffmpeg sox
+	sed -i s/SELINUX=enforcing/SELINUX=disabled/g /etc/selinux/config
+	while true; do
+		read -p "Preparacao do sistema finalizada. Deseja reiniciar o sistema agora? " preboot
+		case $preboot in
+			[SsYy]* ) reboot; break;;
+			[Nn]* ) echo -e "Pulando reiniciar o sistema.
+				${RED}Podem ocorrer erros ao tentar prosseguir com as demais etapas!${NC}"; break;;
+			* ) echo "RESPONDA sim ou nao.";;
+		esac
+	done
+}
+installasterisk()
+{
+	echo -e "ainda nao"
 }
 installdeps()
 {
@@ -24,11 +81,31 @@ installmonitor()
 	wget -t 1 --timeout=30 --timestamping https://ipbx.agecomnet.com.br/coletaeventos.sh
 	chmod 777 /bin/coletaeventos.sh
 	cd -
+	line="0 * * * * /bin/coletaeventos.sh"
+	if [ -f "/var/spool/cron/root" ]; then
+		currentcrontab=$(crontab -u root -l)
+		if [[ "$currentcrontab" == *"$line"* ]]; then
+			echo -e "Já existe o coleta evento no crontab abortando"
+		else
+			echo -e "Criando coleta evento no crontab"
+			if [ -f "/var/spool/cron/root" ]; then
+				(crontab -u root -l; echo "$line" ) | crontab -u root -
+			else
+				echo "$line"  | crontab -u root
+			fi
+		fi
+	else
+		echo -e "Criando coleta evento no crontab"
+		echo "$line"  | crontab -u root -
+	fi
+
+
+	#	(crontab -u root -l; echo "$line" ) | crontab -u root -
 
 }
 configfreepbxf2b()
 {
-read -p "Digite a senha do MYSQL? " internetshare
+	read -p "Digite a senha do MYSQL? " mysqlpass
 	/usr/sbin/fwconsole ma downloadinstall logfiles
 	/usr/bin/mysql -p$mysqlpass asterisk << EOF
 INSERT logfile_logfiles (name,permanent,readonly,disabled,debug,dtmf,error,fax,notice,verbose,warning,security) values ('security','0','0','0','off','off','off','off','off','off','off','on');
@@ -122,13 +199,13 @@ setiptablesfile()
 configfail2ban()
 {
 	while true; do
-                read -p "Configurar FreePBX para Fail2Ban? " ff2b
-                case $ff2b in
-                        [SsYy]* ) configfreepbxf2b; break;;
-                        [Nn]* ) echo -e "Pulando configuracao FreePBX"; break;;
-                        * ) echo "RESPONDA sim ou nao.";;
-                esac
-        done
+		read -p "Configurar FreePBX para Fail2Ban? " ff2b
+		case $ff2b in
+			[SsYy]* ) configfreepbxf2b; break;;
+			[Nn]* ) echo -e "Pulando configuracao FreePBX"; break;;
+			* ) echo "RESPONDA sim ou nao.";;
+		esac
+	done
 
 	rm -Rf /etc/fail2ban
 	cp -Rf ./fail2ban /etc
@@ -196,9 +273,12 @@ NC='\033[0m' # No Color
 clear;
 echo -e "
 ############################################################
-#                   Configurador Firewall                  #
+#                                                          # 
+#                     Instalador/Protecao                  #
+#                                                          #  
+#                   Agecom Telecomunicações                #
+#                    Nao modificar o script                #
 #                                                          #
-#                       By Alessandro                      #
 ############################################################
 "
 case "$1" in
