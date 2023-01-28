@@ -14,9 +14,7 @@ usage() {
 installdeps()
 {
 	yum -y install epel-release
-	yum -y install fail2ban fail2ban-systemd
-	yum -y install GeoIP GeoIP-data GeoIP-GeoLite-data
-	yum -y install iptables-services
+	yum -y install fail2ban fail2ban-systemd GeoIP GeoIP-data GeoIP-GeoLite-data iptables-services mariadb
 	systemctl disable firewalld
 	systemctl stop firewalld
 }
@@ -137,7 +135,7 @@ configfail2ban()
 	cp ./adds/fail2ban_banned_db /usr/local/bin/
 	chmod 0550 /usr/local/bin/fail2ban_banned_db
 	/bin/systemctl restart fail2ban.service
-	/bin/systemctl eneble fail2ban.service
+	/bin/systemctl enable fail2ban.service
 }
 configiptables()
 {
