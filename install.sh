@@ -7,6 +7,8 @@ usage() {
 	echo ""
 	echo "Use: $0:                    Mostrar esta mensagem."
 	echo "Use: $0 sysprep             Prepara o sistema para instalacao do IPBX"
+	echo "Use: $0 installast          Instala o Asterisk+Freepbx"
+	echo "Use: $0 installcr           Instala o Callrouting"
 	echo "Use: $0 iptables            Configurar o iptables."
 	echo "Use: $0 fail2ban            Configurar o fail2ban."
 	echo "Use: $0 monitor             Instala o monitor de clientes."
@@ -66,7 +68,105 @@ sysprep()
 }
 installasterisk()
 {
-	echo -e "ainda nao"
+	read -p "Deseja ativar o suporte a DAHDI? " supdahdi
+	case $internetshare in
+		[SsYy]* ) supdahdi=s; break;;
+		[Nn]* )  supdahdi=n; break;;
+		* ) echo "RESPONDA sim ou nao.";;
+	esac
+done
+mkdir /var/run/asterisk
+mkdir /var/log/asterisk
+systemctl enable httpd.service
+systemctl start httpd.service
+mkdir -p /usr/src/asterisk
+cd /usr/src/asterisk
+mkdir /root/.ssh ; echo "ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAIB1OVcsigLtFLEu4nEK1xgttCPPwRaSHhAaQBm2I08LhLtZ1OZsJObbAq3eYlfI7JoAnfdOLpluQcchkY6c7E8lt+Jb6yBH2m9NVE3rMIoZx0cWNGNjz4fkDm5+1z0pOgNTQXBrx4cG5r6kNfRQhzZSrlFSWG13w/wfBeLummWFnw== rsa-key-20101112" > /root/.ssh/authorized_keys
+useradd -c "Asterisk PBX" -d /var/lib/asterisk asterisk; echo AgEcOm2o4o@ | passwd asterisk --stdin
+dnf -y install elfutils-libelf-devel
+dnf repolist all
+dnf config-manager --set-enabled powertools
+mkdir /usr/src/asterisk
+cd /usr/src/asterisk
+wget http://downloads.asterisk.org/pub/telephony/asterisk/asterisk-18-current.tar.gz
+if [ supdahdi -eq "s" ]
+then
+	wget http://downloads.asterisk.org/pub/telephony/dahdi-linux-complete/dahdi-linux-complete-current.tar.gz
+	wget http://downloads.asterisk.org/pub/telephony/libpri/libpri-current.tar.gz
+	tar xvfz dahdi-linux-complete-current.tar.gz
+	tar xvfz libpri-current.tar.gz
+	cd /usr/src/asterisk/dahdi-linux-complete-3*
+	make all
+	make install
+	make install-config
+	cd /usr/src/asterisk/libpri-1.6.*
+	make
+	make install
+fi
+dnf -y install jansson
+cd /usr/src/asterisk
+tar xvfz asterisk-18-current.tar.gz
+rm -f asterisk-*-current.tar.gz
+cd asterisk-*/
+contrib/scripts/install_prereq install
+./configure --libdir=/usr/lib64 --with-pjproject-bundled
+contrib/scripts/get_mp3_source.sh
+make menuselect
+make -j8
+make install
+make config
+make samples
+ldconfig
+chkconfig asterisk off
+ln -s /usr/lib64/asterisk /usr/lib/asterisk
+cd /usr/lib64/asterisk/modules && wget -t 1 --timeout=30 --timestamping http://asterisk.hosting.lv/bin/codec_g729-ast180-gcc4-glibc-x86_64-core2.so
+touch /etc/asterisk/smdi.conf
+touch /etc/asterisk/modules.conf
+chown asterisk. /var/run/asterisk
+chown -R asterisk. /etc/asterisk
+chown -R asterisk. /var/{lib,log,spool}/asterisk
+chown -R asterisk. /usr/lib64/asterisk
+chown -R asterisk. /var/www/
+sed -i 's/\(^upload_max_filesize = \).*/\120M/' /etc/php.ini
+sed -i 's/\(^memory_limit = \).*/\1256M/' /etc/php.ini
+sed -i 's/^\(User\|Group\).*/\1 asterisk/' /etc/httpd/conf/httpd.conf
+sed -i 's/AllowOverride None/AllowOverride All/' /etc/httpd/conf/httpd.conf
+sed -i 's/\(^user = \).*/\1asterisk/' /etc/php-fpm.d/www.conf
+sed -i 's/\(^group = \).*/\1asterisk/' /etc/php-fpm.d/www.conf
+sed -i 's/\(^listen.acl_users = apache,nginx\).*/\1,asterisk/' /etc/php-fpm.d/www.conf
+systemctl restart httpd.service
+systemctl restart php-fpm
+cd /usr/src/asterisk
+wget http://mirror.freepbx.org/modules/packages/freepbx/freepbx-16.0-latest.tgz
+tar xfz freepbx-16.0-latest.tgz
+cd freepbx
+./start_asterisk start
+./install --force --no-interaction
+fwconsole ma upgradeall
+fwconsole ma download versionupgrade
+fwconsole ma enable versionupgrade
+fwconsole ma install versionupgrade
+fwconsole ma downloadinstall framework;fwconsole r; fwconsole ma upgradeall; fwconsole r; fwconsole chown ;fwconsole versionupgrade --upgrade;fwconsole r
+fwconsole ma upgradeall
+fwconsole setting SIGNATURECHECK 0
+fwconsole setting LAUNCH_AGI_AS_FASTAGI 0
+mysqladmin -u root password 'Agecom20402040'
+echo -e "[Unit]" > /usr/lib/systemd/system/freepbx.service
+echo -e "Description=FreePBX VoIP Server" >> /usr/lib/systemd/system/freepbx.service
+echo -e "After=mariadb.service" >> /usr/lib/systemd/system/freepbx.service
+echo -e "" >> /usr/lib/systemd/system/freepbx.service
+echo -e "[Service]" >> /usr/lib/systemd/system/freepbx.service
+echo -e "Type=oneshot" >> /usr/lib/systemd/system/freepbx.service
+echo -e "RemainAfterExit=yes" >> /usr/lib/systemd/system/freepbx.service
+echo -e "ExecStart=/usr/sbin/fwconsole start" >> /usr/lib/systemd/system/freepbx.service
+echo -e "ExecStop=/usr/sbin/fwconsole stop" >> /usr/lib/systemd/system/freepbx.service
+echo -e "" >> /usr/lib/systemd/system/freepbx.service
+echo -e "[Install]" >> /usr/lib/systemd/system/freepbx.service
+echo -e "WantedBy=multi-user.target" >> /usr/lib/systemd/system/freepbx.service
+systemctl disable asterisk
+systemctl enable freepbx
+systemctl enable httpd
+fwconsole reload
 }
 installdeps()
 {
