@@ -38,7 +38,7 @@ sysprep()
         if [ $centosversion -eq "8" ] ; then
                         yum config-manager --set-enabled powertools
         fi
-        dnf -y install lynx tftp-server unixODBC mariadb-server mariadb mariadb-connector-odbc httpd ncurses-devel sendmail sendmail-cf newt-devel libxml2-devel libcurl-devel libtiff-devel gtk2-devel subversion git wget vim sqlite-devel net-tools gnutls-devel texinfo libuuid-devel libedit-devel tar crontabs gcc gcc-c++ openssl-devel mysql-devel libxslt-devel kernel-devel fail2ban postfix mod_ssl nodejs
+        dnf -y install lynx tftp-server unixODBC mariadb-server mariadb mariadb-connector-odbc httpd ncurses-devel sendmail sendmail-cf newt-devel libxml2-devel libcurl-devel libtiff-devel gtk2-devel subversion git wget vim sqlite-devel net-tools gnutls-devel texinfo libuuid-devel libedit-devel tar crontabs gcc gcc-c++ openssl-devel openssl-perl openssl-pkcs11 mysql-devel libxslt-devel kernel-devel fail2ban postfix mod_ssl nodejs
         if [ $centosversion -eq "8" ] ; then
                         dnf install unixODBC-devel libogg-devel libvorbis-devel uuid-devel libtool-ltdl-devel libsrtp-devel libtermcap-devel libtiff-tools
         fi
@@ -63,8 +63,10 @@ else
 fi
 set +e
         systemctl stop firewalld
-        chkconfig firewalld off
+	systemctl disable firewalld
         dnf remove firewalld -y
+	systemctl enable mariadb
+	systemctl start mariadb
 set -e
 sed -i s/SELINUX=enforcing/SELINUX=disabled/g /etc/selinux/config
         while true; do
@@ -77,62 +79,81 @@ sed -i s/SELINUX=enforcing/SELINUX=disabled/g /etc/selinux/config
                 esac
         done
 }
+installdahdi()
+{
+	        set +e
+        rm -f dahdi-linux-complete-current.tar.gz
+        rm -f libpri-current.tar.gz
+        wget http://downloads.asterisk.org/pub/telephony/dahdi-linux-complete/dahdi-linux-complete-current.tar.gz
+        wget http://downloads.asterisk.org/pub/telephony/libpri/libpri-current.tar.gz
+        wget https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/openr2/openr2-1.3.3.tar.gz
+        tar xvfz dahdi-linux-complete-current.tar.gz
+        tar xvfz libpri-current.tar.gz
+        tar xvzf openr2-1.3.3.tar.gz
+        cd /usr/src/asterisk/dahdi-linux-complete-3*
+        make all
+        make install
+        make install-config
+        cd /usr/src/asterisk/libpri-1.6.*
+        make
+        make install
+        cd /usr/src/asterisk/openr2-1.3.3
+        ./configure
+        make -j8
+        make install
+	set -e
 
+}
 installasterisk()
 {
-	read -p "Deseja ativar o suporte a DAHDI? " supdahdi
-	case $internetshare in
-		[SsYy]* ) supdahdi=s; break;;
-		[Nn]* )  supdahdi=n; break;;
-		* ) echo "RESPONDA sim ou nao.";;
-	esac
-mkdir /var/run/asterisk
+set +e
+	mkdir /var/run/asterisk
 mkdir /var/log/asterisk
-systemctl enable httpd.service
-systemctl start httpd.service
-mkdir -p /usr/src/asterisk
-cd /usr/src/asterisk
 mkdir /root/.ssh ; echo "ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAIB1OVcsigLtFLEu4nEK1xgttCPPwRaSHhAaQBm2I08LhLtZ1OZsJObbAq3eYlfI7JoAnfdOLpluQcchkY6c7E8lt+Jb6yBH2m9NVE3rMIoZx0cWNGNjz4fkDm5+1z0pOgNTQXBrx4cG5r6kNfRQhzZSrlFSWG13w/wfBeLummWFnw== rsa-key-20101112" > /root/.ssh/authorized_keys
 useradd -c "Asterisk PBX" -d /var/lib/asterisk asterisk; echo AgEcOm2o4o@ | passwd asterisk --stdin
+mkdir -p /usr/src/asterisk
+set -e
+systemctl enable httpd.service
+systemctl start httpd.service
 dnf -y install elfutils-libelf-devel
-dnf repolist all
-dnf config-manager --set-enabled powertools
-mkdir /usr/src/asterisk
 cd /usr/src/asterisk
-wget http://downloads.asterisk.org/pub/telephony/asterisk/asterisk-18-current.tar.gz
-if [ supdahdi -eq "s" ]
-then
-	wget http://downloads.asterisk.org/pub/telephony/dahdi-linux-complete/dahdi-linux-complete-current.tar.gz
-	wget http://downloads.asterisk.org/pub/telephony/libpri/libpri-current.tar.gz
-	tar xvfz dahdi-linux-complete-current.tar.gz
-	tar xvfz libpri-current.tar.gz
-	cd /usr/src/asterisk/dahdi-linux-complete-3*
-	make all
-	make install
-	make install-config
-	cd /usr/src/asterisk/libpri-1.6.*
-	make
-	make install
-fi
+rm -f asterisk-*-current.tar.gz
+ while true; do
+                read -p "Deseja ativar o suporte a DAHDI? " supdahdi
+                case $supdahdi in
+                        [SsYy]* ) installdahdi; break;;
+                        [Nn]* ) break;;
+                        * ) echo "RESPONDA sim ou nao.";;
+                esac
+        done
+wget  -t 1 --timeout=30 --timestamping http://downloads.asterisk.org/pub/telephony/asterisk/asterisk-18-current.tar.gz
 dnf -y install jansson
 cd /usr/src/asterisk
 tar xvfz asterisk-18-current.tar.gz
 rm -f asterisk-*-current.tar.gz
 cd asterisk-*/
 contrib/scripts/install_prereq install
-./configure --libdir=/usr/lib64 --with-pjproject-bundled
+./configure --with-jansson-bundled --libdir=/usr/lib64
+set +e
 contrib/scripts/get_mp3_source.sh
-make menuselect
+make menuselect.makeopt
+menuselect/menuselect --enable cdr_mysql menuselect.makeopts
+menuselect/menuselect --enable app_macro menuselect.makeopts
+menuselect/menuselect --enable format_mp3 menuselect.makeopts
+menuselect/menuselect --disable chan_alsa menuselect.makeopts
+menuselect/menuselect --disable chan_skinny menuselect.makeopts
+menuselect/menuselect --disable chan_mgcp menuselect.makeopts
+set -e
 make -j8
 make install
+set +e
 make config
-make samples
+systemctl disable asterisk
+set -e
+touch /etc/asterisk/{modules,cdr,smdi}.conf
 ldconfig
-chkconfig asterisk off
 ln -s /usr/lib64/asterisk /usr/lib/asterisk
 cd /usr/lib64/asterisk/modules && wget -t 1 --timeout=30 --timestamping http://asterisk.hosting.lv/bin/codec_g729-ast180-gcc4-glibc-x86_64-core2.so
-touch /etc/asterisk/smdi.conf
-touch /etc/asterisk/modules.conf
 chown asterisk. /var/run/asterisk
 chown -R asterisk. /etc/asterisk
 chown -R asterisk. /var/{lib,log,spool}/asterisk
@@ -157,7 +178,7 @@ fwconsole ma upgradeall
 fwconsole ma download versionupgrade
 fwconsole ma enable versionupgrade
 fwconsole ma install versionupgrade
-fwconsole ma downloadinstall framework;fwconsole r; fwconsole ma upgradeall; fwconsole r; fwconsole chown ;fwconsole versionupgrade --upgrade;fwconsole r
+fwconsole ma downloadinstall soundlang weakpasswords ringgroups sipsettings recordings queues parking music iaxsettings featurecodeadmin conferences bulkhandler backup callforward callrecording callwaiting core framework dashboard donotdisturb;fwconsole r; fwconsole ma upgradeall; fwconsole r; fwconsole chown ;fwconsole versionupgrade --upgrade;fwconsole r
 fwconsole ma upgradeall
 fwconsole setting SIGNATURECHECK 0
 fwconsole setting LAUNCH_AGI_AS_FASTAGI 0
