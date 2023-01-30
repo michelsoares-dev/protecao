@@ -16,11 +16,11 @@ usage() {
 }
 configrepomariadb()
 {
-	echo -e "# MariaDB 10.8 CentOS repository list - created 2023-01-28 15:43 UTC
+	echo -e "# MariaDB 10.6 RedHat repository list - created 2023-01-30 17:32 UTC
 	# https://mariadb.org/download/
 	[mariadb]
 	name = MariaDB
-	baseurl = https://mirrors.gigenet.com/mariadb/yum/10.8/centos$centosversion-amd64
+	baseurl = https://mirrors.gigenet.com/mariadb/yum/10.6/rhel$centosversion-amd64
 	module_hotfixes=1
 	gpgkey=https://mirrors.gigenet.com/mariadb/yum/RPM-GPG-KEY-MariaDB
 	gpgcheck=1" > /etc/yum.repos.d/MariaDB.repo
@@ -32,9 +32,11 @@ sysprep()
 	configrepomariadb
 	dnf -y upgrade
 	timedatectl set-timezone America/Sao_Paulo
+set +e
 	systemctl stop firewalld
 	chkconfig firewalld off
 	yum remove firewalld -y
+set -e
 	yum -y install epel-release
 	yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-$centosversion.noarch.rpm
 	yum config-manager --set-enabled powertools
