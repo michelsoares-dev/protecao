@@ -20,7 +20,7 @@ configrepomariadb()
 	# https://mariadb.org/download/
 	[mariadb]
 	name = MariaDB
-	baseurl = https://mirrors.gigenet.com/mariadb/yum/10.8/centos8-amd64
+	baseurl = https://mirrors.gigenet.com/mariadb/yum/10.8/centos$centosversion-amd64
 	module_hotfixes=1
 	gpgkey=https://mirrors.gigenet.com/mariadb/yum/RPM-GPG-KEY-MariaDB
 	gpgcheck=1" > /etc/yum.repos.d/MariaDB.repo
@@ -36,18 +36,18 @@ sysprep()
 	chkconfig firewalld off
 	yum remove firewalld -y
 	yum -y install epel-release
-	yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+	yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-$centosversion.noarch.rpm
 	yum config-manager --set-enabled powertools
 	yum -y install lynx tftp-server unixODBC mariadb-server mariadb mariadb-connector-odbc httpd ncurses-devel sendmail sendmail-cf newt-devel libxml2-devel unixODBC-devel libcurl-devel libogg-devel libvorbis-devel libtiff-devel gtk2-devel subversion git wget vim uuid-devel sqlite-devel net-tools gnutls-devel texinfo libuuid-devel libedit-devel tar crontabs gcc gcc-c++ openssl-devel libtool-ltdl-devel mysql-devel libsrtp-devel libxslt-devel kernel-devel libtermcap-devel fail2ban libtiff-tools postfix mod_ssl nodejs
 	dnf -y remove php*
-	dnf -y install https://rpms.remirepo.net/enterprise/remi-release-8.rpm
+	dnf -y install https://rpms.remirepo.net/enterprise/remi-release-$centosversion.rpm
 	dnf -y module disable php
 	dnf -y module enable php:remi-7.4
 	dnf install -y php php-pdo php-mysqlnd php-mbstring php-pear php-process php-xml php-opcache php-ldap php-intl php-soap php-json
 	dnf install -y https://dev.mysql.com/get/Downloads/Connector-ODBC/8.0/mysql-connector-odbc-8.0.32-1.el8.x86_64.rpm
-	dnf install https://rpmfind.net/linux/centos/8-stream/AppStream/x86_64/os/Packages/mariadb-connector-odbc-3.1.12-1.el8.x86_64.rpm
-	dnf -y install https://download1.rpmfusion.org/free/el/rpmfusion-free-release-8.noarch.rpm
-	dnf -y install https://forensics.cert.org/cert-forensics-tools-release-el8.rpm
+	dnf install https://rpmfind.net/linux/centos/$centosversion-stream/AppStream/x86_64/os/Packages/mariadb-connector-odbc-3.1.12-1.el8.x86_64.rpm
+	dnf -y install https://download1.rpmfusion.org/free/el/rpmfusion-free-release-$centosversion.noarch.rpm
+	dnf -y install https://forensics.cert.org/cert-forensics-tools-release-el$centosversion.rpm
 
 	systemctl stop firewalld
 	systemctl disable firewalld
@@ -74,7 +74,6 @@ installasterisk()
 		[Nn]* )  supdahdi=n; break;;
 		* ) echo "RESPONDA sim ou nao.";;
 	esac
-done
 mkdir /var/run/asterisk
 mkdir /var/log/asterisk
 systemctl enable httpd.service
@@ -368,6 +367,7 @@ configiptables()
 		[Nn]* ) setiptablesfile 0; break;;
 	esac
 }
+centosversion=`cat /etc/centos-release | tr -dc '0-9.'`
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 clear;
@@ -382,6 +382,9 @@ echo -e "
 ############################################################
 "
 case "$1" in
+	sysprep)
+		sysprep
+		;;
 	iptables)
 		configiptables
 		;;
