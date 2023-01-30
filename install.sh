@@ -17,13 +17,13 @@ usage() {
 configrepomariadb()
 {
 	echo -e "# MariaDB 10.6 RedHat repository list - created 2023-01-30 17:32 UTC
-	# https://mariadb.org/download/
-	[mariadb]
-	name = MariaDB
-	baseurl = https://mirrors.gigenet.com/mariadb/yum/10.6/rhel$centosversion-amd64
-	module_hotfixes=1
-	gpgkey=https://mirrors.gigenet.com/mariadb/yum/RPM-GPG-KEY-MariaDB
-	gpgcheck=1" > /etc/yum.repos.d/MariaDB.repo
+# https://mariadb.org/download/
+[mariadb]
+name = MariaDB
+baseurl = https://mirrors.gigenet.com/mariadb/yum/10.6/rhel$centosversion-amd64
+module_hotfixes=1
+gpgkey=https://mirrors.gigenet.com/mariadb/yum/RPM-GPG-KEY-MariaDB
+gpgcheck=1" > /etc/yum.repos.d/MariaDB.repo
 }
 sysprep()
 {
