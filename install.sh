@@ -16,7 +16,6 @@ usage() {
 }
 configrepomariadb()
 {
-<<<<<<< HEAD
 	echo -e "# MariaDB 10.8 CentOS repository list - created 2023-01-28 15:43 UTC
 	# https://mariadb.org/download/
 	[mariadb]
