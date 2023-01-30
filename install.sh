@@ -27,47 +27,57 @@ gpgcheck=1" > /etc/yum.repos.d/MariaDB.repo
 }
 sysprep()
 {
-	sed -i 's/\(^SELINUX=\).*/\SELINUX=disabled/' /etc/sysconfig/selinux
-	sed -i 's/\(^SELINUX=\).*/\SELINUX=disabled/' /etc/selinux/config
-	configrepomariadb
-	dnf -y upgrade
-	timedatectl set-timezone America/Sao_Paulo
+        sed -i 's/\(^SELINUX=\).*/\SELINUX=disabled/' /etc/sysconfig/selinux
+        sed -i 's/\(^SELINUX=\).*/\SELINUX=disabled/' /etc/selinux/config
+        configrepomariadb
+        dnf -y upgrade
+        timedatectl set-timezone America/Sao_Paulo
+        dnf -y install epel-release
+        dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-$centosversion.noarch.rpm
+        dnf -y install dnf-plugins-core
+        if [ $centosversion -eq "8" ] ; then
+                        yum config-manager --set-enabled powertools
+        fi
+        dnf -y install lynx tftp-server unixODBC mariadb-server mariadb mariadb-connector-odbc httpd ncurses-devel sendmail sendmail-cf newt-devel libxml2-devel libcurl-devel libtiff-devel gtk2-devel subversion git wget vim sqlite-devel net-tools gnutls-devel texinfo libuuid-devel libedit-devel tar crontabs gcc gcc-c++ openssl-devel mysql-devel libxslt-devel kernel-devel fail2ban postfix mod_ssl nodejs
+        if [ $centosversion -eq "8" ] ; then
+                        dnf install unixODBC-devel libogg-devel libvorbis-devel uuid-devel libtool-ltdl-devel libsrtp-devel libtermcap-devel libtiff-tools
+        fi
+
+        dnf -y remove php*
+        dnf -y install https://rpms.remirepo.net/enterprise/remi-release-$centosversion.rpm
+        dnf -y module disable php
+        dnf -y module enable php:remi-7.4
+        dnf install -y php php-pdo php-mysqlnd php-mbstring php-pear php-process php-xml php-opcache php-ldap php-intl php-soap php-json
+        dnf install -y https://dev.mysql.com/get/Downloads/Connector-ODBC/8.0/mysql-connector-odbc-8.0.32-1.el8.x86_64.rpm
+#       dnf install https://rpmfind.net/linux/centos/$centosversion-stream/AppStream/x86_64/os/Packages/mariadb-connector-odbc-3.1.12-1.el8.x86_64.rpm
+        dnf -y install https://download1.rpmfusion.org/free/el/rpmfusion-free-release-$centosversion.noarch.rpm
+        dnf -y install https://forensics.cert.org/cert-forensics-tools-release-el$centosversion.rpm
+        sed -i 's/\/lib\/libmyodbc5.so/\/lib64\/libmyodbc8a.so/' /etc/odbcinst.ini
+        sed -i 's/\/lib64\/libmyodbc5.so/\/lib64\/libmyodbc8a.so/' /etc/odbcinst.ini
+if [ $centosversion -eq "9" ] ; then
+        dnf -y install https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-9.noarch.rpm
+        dnf -y install https://mirrors.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-9.noarch.rpm
+        dnf -y install sox
+else
+        dnf -y install ffmpeg
+fi
 set +e
-	systemctl stop firewalld
-	chkconfig firewalld off
-	yum remove firewalld -y
+        systemctl stop firewalld
+        chkconfig firewalld off
+        dnf remove firewalld -y
 set -e
-	yum -y install epel-release
-	yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-$centosversion.noarch.rpm
-	yum config-manager --set-enabled powertools
-	yum -y install lynx tftp-server unixODBC mariadb-server mariadb mariadb-connector-odbc httpd ncurses-devel sendmail sendmail-cf newt-devel libxml2-devel unixODBC-devel libcurl-devel libogg-devel libvorbis-devel libtiff-devel gtk2-devel subversion git wget vim uuid-devel sqlite-devel net-tools gnutls-devel texinfo libuuid-devel libedit-devel tar crontabs gcc gcc-c++ openssl-devel libtool-ltdl-devel mysql-devel libsrtp-devel libxslt-devel kernel-devel libtermcap-devel fail2ban libtiff-tools postfix mod_ssl nodejs
-	dnf -y remove php*
-	dnf -y install https://rpms.remirepo.net/enterprise/remi-release-$centosversion.rpm
-	dnf -y module disable php
-	dnf -y module enable php:remi-7.4
-	dnf install -y php php-pdo php-mysqlnd php-mbstring php-pear php-process php-xml php-opcache php-ldap php-intl php-soap php-json
-	dnf install -y https://dev.mysql.com/get/Downloads/Connector-ODBC/8.0/mysql-connector-odbc-8.0.32-1.el8.x86_64.rpm
-	dnf install https://rpmfind.net/linux/centos/$centosversion-stream/AppStream/x86_64/os/Packages/mariadb-connector-odbc-3.1.12-1.el8.x86_64.rpm
-	dnf -y install https://download1.rpmfusion.org/free/el/rpmfusion-free-release-$centosversion.noarch.rpm
-	dnf -y install https://forensics.cert.org/cert-forensics-tools-release-el$centosversion.rpm
-
-	systemctl stop firewalld
-	systemctl disable firewalld
-
-	sed -i 's/\/lib\/libmyodbc5.so/\/lib64\/libmyodbc8a.so/' /etc/odbcinst.ini
-	sed -i 's/\/lib64\/libmyodbc5.so/\/lib64\/libmyodbc8a.so/' /etc/odbcinst.ini
-	dnf -y install ffmpeg sox
-	sed -i s/SELINUX=enforcing/SELINUX=disabled/g /etc/selinux/config
-	while true; do
-		read -p "Preparacao do sistema finalizada. Deseja reiniciar o sistema agora? " preboot
-		case $preboot in
-			[SsYy]* ) reboot; break;;
-			[Nn]* ) echo -e "Pulando reiniciar o sistema.
-				${RED}Podem ocorrer erros ao tentar prosseguir com as demais etapas!${NC}"; break;;
-			* ) echo "RESPONDA sim ou nao.";;
-		esac
-	done
+sed -i s/SELINUX=enforcing/SELINUX=disabled/g /etc/selinux/config
+        while true; do
+                read -p "Preparacao do sistema finalizada. Deseja reiniciar o sistema agora? " preboot
+                case $preboot in
+                        [SsYy]* ) reboot; break;;
+                        [Nn]* ) echo -e "Pulando reiniciar o sistema.
+                                ${RED}Podem ocorrer erros ao tentar prosseguir com as demais etapas!${NC}"; break;;
+                        * ) echo "RESPONDA sim ou nao.";;
+                esac
+        done
 }
+
 installasterisk()
 {
 	read -p "Deseja ativar o suporte a DAHDI? " supdahdi
@@ -387,6 +397,12 @@ case "$1" in
 	sysprep)
 		sysprep
 		;;
+	installast)
+		installasterisk
+		;;
+	installcr)
+		installasterisk
+                ;;
 	iptables)
 		configiptables
 		;;
