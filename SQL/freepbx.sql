@@ -1,0 +1,13 @@
+CREATE USER 'coletor'@'%' IDENTIFIED BY 'Agecom20402040';
+GRANT ALL PRIVILEGES ON asteriskcdrdb. TO 'coletor'@'%';
+FLUSH PRIVILEGES;
+ALTER TABLE asteriskcdrdb.cdr ADD COLUMN coletado boolean;
+update asteriskcdrdb.cdr set coletado=False;
+ALTER TABLE asteriskcdrdb.cdr ALTER COLUMN coletado SET DEFAULT false;
+GRANT ALL PRIVILEGES ON asteriskcdrdb.* TO 'coletor'@'%' IDENTIFIED BY 'Agecom20402040';
+CREATE INDEX idx_channel ON cdr (channel);
+CREATE INDEX idx_coletado ON cdr (coletado );
+CREATE INDEX idx_calldate ON cdr (calldate);
+CREATE TABLE troncos (tronco VARCHAR(30),nome VARCHAR(30));
+CREATE TABLE rml_status (id int, valor TEXT, PRIMARY KEY (id));
+INSERT INTO rml_status values (0,'');

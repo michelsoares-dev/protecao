@@ -12,7 +12,8 @@ usage() {
 	echo "Use: $0 iptables            Configurar o iptables."
 	echo "Use: $0 fail2ban            Configurar o fail2ban."
 	echo "Use: $0 monitor             Instala o monitor de clientes."
-	echo "Use: $0 installdeps         Instalar os pacotes necessarios para fail2ban."
+	echo "Use: $0 installdeps         Instalar os pacotes necessarios para fail2ban. (Já foi executado durenate a instalação)"
+	echo "Use: $0 configsegurancafpbx Configura protecoes FREEPBX. (Já foi executado durenate a instalação)"
 }
 configrepomariadb()
 {
@@ -194,6 +195,7 @@ fwconsole setting PHPTIMEZONE America/Sao_Paulo
 fwconsole setting UIDEFAULTLANG pt_BR
 fwconsole setting TIMEFORMAT "24 Hour Format"
 fwconsole setting TONEZONE br
+fwconsole setting ASTSIPDRIVER both
 
 mysqladmin -u root password 'Agecom20402040'
 configsegurancafpbx Agecom20402040
@@ -331,23 +333,10 @@ EOF
 }
 configsegurancafpbx()
 {
-mysql -pAgecom20402040 asterisk << EOF update asterisk.featurecodes set enabled='0',defaultcode=' ',customcode=' ' where featurename='blindxfer'; update soundlang_settings set value='g722,g729,ulaw' where keyword='formats';update soundlang_settings set value= 'pt_BR' where keyword='language'; insert into soundlang_customlangs \(language,description\) values \('pt_BR','Brazil'\);
+mysql -pAgecom20402040 asterisk << EOF
+update asterisk.featurecodes set enabled='0',defaultcode=' ',customcode=' ' where featurename='blindxfer'; update soundlang_settings set value='g722,g729,ulaw' where keyword='formats';update soundlang_settings set value= 'pt_BR' where keyword='language'; insert into soundlang_customlangs (language,description) values ('pt_BR','Brazil');
 EOF
-mysql -pAgecom20402040 asteriskcdr << EOF 
-CREATE USER 'coletor'@'%' IDENTIFIED BY 'Agecom20402040';
-GRANT ALL PRIVILEGES ON . TO 'coletor'@'%';
-FLUSH PRIVILEGES;
-ALTER TABLE asteriskcdrdb.cdr ADD COLUMN coletado boolean;
-update asteriskcdrdb.cdr set coletado=False;
-ALTER TABLE asteriskcdrdb.cdr ALTER COLUMN coletado SET DEFAULT false;
-GRANT ALL PRIVILEGES ON asteriskcdrdb.* TO coletor@'%' IDENTIFIED BY 'Agecom20402040';
-CREATE INDEX idx_channel ON cdr (channel);
-CREATE INDEX idx_coletado ON cdr (coletado );
-CREATE INDEX idx_calldate ON cdr (calldate);
-CREATE TABLE troncos (tronco VARCHAR(30),nome VARCHAR(30));
-CREATE TABLE rml_status (id int, valor TEXT, PRIMARY KEY (id));
-INSERT INTO rml_status values (0,'');
-EOF
+mysql -pAgecom20402040 asteriskcdrdb < /protecao/SQL/freepbx.sql
 }
 setdosasynprotection()
 {
@@ -541,6 +530,9 @@ case "$1" in
 		;;
 	monitor)
 		installmonitor
+		;;
+	configsegurancafpbx)
+		configsegurancafpbx
 		;;
 	'')
 		usage
