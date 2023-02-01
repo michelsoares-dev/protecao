@@ -61,6 +61,7 @@ if [ $centosversion -eq "9" ] ; then
 else
         dnf -y install ffmpeg
 fi
+installdeps
 set +e
         systemctl stop firewalld
 	systemctl disable firewalld
@@ -191,8 +192,11 @@ fwconsole setting FREEPBX_SYSTEM_IDENT $HOSTNAME
 fwconsole setting RSSFEEDS ""
 fwconsole setting PHPTIMEZONE America/Sao_Paulo
 fwconsole setting UIDEFAULTLANG pt_BR
+fwconsole setting TIMEFORMAT "24 Hour Format"
+fwconsole setting TONEZONE br
 
 mysqladmin -u root password 'Agecom20402040'
+configsegurancafpbx Agecom20402040
 echo -e "[Unit]" > /usr/lib/systemd/system/freepbx.service
 echo -e "Description=FreePBX VoIP Server" >> /usr/lib/systemd/system/freepbx.service
 echo -e "After=mariadb.service" >> /usr/lib/systemd/system/freepbx.service
@@ -254,7 +258,7 @@ INSERT logfile_logfiles (name,permanent,readonly,disabled,debug,dtmf,error,fax,n
 EOF
 /usr/sbin/fwconsole r
 }
-configseguranca()
+configsegurancafpbx()
 {
 /usr/bin/mysql -p$1 asterisk << EOF update asterisk.featurecodes set enabled='0',defaultcode=' ',customcode=' ' where featurename='blindxfer'";
 update soundlang_settings set formats='g722,g729,ulaw',language='pt_BR '";
