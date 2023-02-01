@@ -178,7 +178,7 @@ fwconsole ma upgradeall
 fwconsole ma download versionupgrade
 fwconsole ma enable versionupgrade
 fwconsole ma install versionupgrade
-fwconsole ma downloadinstall soundlang weakpasswords ringgroups sipsettings recordings queues parking music iaxsettings featurecodeadmin conferences bulkhandler backup callforward callrecording callwaiting core framework dashboard donotdisturb;fwconsole r; fwconsole ma upgradeall; fwconsole r; fwconsole chown ;fwconsole versionupgrade --upgrade;fwconsole r
+fwconsole ma downloadinstall soundlang weakpasswords ringgroups sipsettings recordings queues parking music iaxsettings featurecodeadmin conferences bulkhandler backup callforward callrecording callwaiting core framework dashboard donotdisturb logfiles;fwconsole r; fwconsole ma upgradeall; fwconsole r; fwconsole chown ;fwconsole versionupgrade --upgrade;fwconsole r
 fwconsole ma upgradeall
 fwconsole setting SIGNATURECHECK 0
 fwconsole setting LAUNCH_AGI_AS_FASTAGI 0
@@ -243,6 +243,28 @@ configfreepbxf2b()
 INSERT logfile_logfiles (name,permanent,readonly,disabled,debug,dtmf,error,fax,notice,verbose,warning,security) values ('security','0','0','0','off','off','off','off','off','off','off','on');
 EOF
 /usr/sbin/fwconsole r
+}
+configseguranca()
+{
+/usr/bin/mysql -p$1 asterisk << EOF update asterisk.featurecodes set enabled='0',defaultcode=' ',customcode=' ' where featurename='blindxfer'";
+update soundlang_settings set formats='g722,g729,ulaw',language='pt_BR '";
+insert into soundlang_customlangs (language,description)values('pt_BR','Brazil')";
+EOF
+/usr/bin/mysql -p$1 asteriskcdr << EOF 
+CREATE USER 'coletor'@'%' IDENTIFIED BY 'Agecom20402040'";
+GRANT ALL PRIVILEGES ON . TO 'coletor'@'%'";
+FLUSH PRIVILEGES";
+ALTER TABLE asteriskcdrdb.cdr ADD COLUMN coletado boolean" ;
+update asteriskcdrdb.cdr set coletado=False";
+ALTER TABLE asteriskcdrdb.cdr ALTER COLUMN coletado SET DEFAULT false";
+GRANT ALL PRIVILEGES ON asteriskcdrdb.* TO coletor@'%' IDENTIFIED BY 'Agecom20402040'";
+CREATE INDEX idx_channel ON cdr (channel)";
+CREATE INDEX idx_coletado ON cdr (coletado )";
+CREATE INDEX idx_calldate ON cdr (calldate)";
+CREATE TABLE troncos (tronco VARCHAR(30),nome VARCHAR(30))";
+CREATE TABLE rml_status (id int, valor TEXT, PRIMARY KEY (id))";
+INSERT INTO rml_status values (0,'')";
+EOF
 }
 setdosasynprotection()
 {
