@@ -239,8 +239,8 @@ sed -i "s/#listen_addresses.*/$listen_addresses/" /var/lib/pgsql/data/postgresql
 sed -i '83 i\host    all             all             0.0.0.0 0.0.0.0         md5' /var/lib/pgsql/data/pg_hba.conf
 tar -xvzf adds/asterisk.tar.gz -C /
 asterisk -rx 'core restart now'
-runuser -l postgres -c "psql callpro < SQL/callpro.sql"
-runuser -l postgres -c "psql gravador < SQL/gravador.sql"
+runuser -l postgres -c "psql callpro < /protecao/SQL/callpro.sql"
+runuser -l postgres -c "psql gravador < /protecao/SQL/gravador.sql"
 
 cd /usr/src
 wget https://ufpr.dl.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz
@@ -280,9 +280,10 @@ echo -e >> /etc/systemd/system/callroute.service
 echo -e [Install]>> /etc/systemd/system/callroute.service
 echo -e WantedBy=multi-user.target>> /etc/systemd/system/callroute.service
 systemctl enable callroute.service
+systemctl start callroute.service
+systemctl restart postgresql
 cp -f /usr/local/bin/lame /var/agecom/callroute/lame.exe
 
-systemctl restart postgresql
 }
 installdeps()
 {
