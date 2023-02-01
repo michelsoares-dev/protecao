@@ -214,6 +214,76 @@ systemctl enable freepbx
 systemctl enable httpd
 fwconsole reload
 }
+
+installcr()
+{
+dnf -y module enable postgresql:13
+dnf -y install postgresql-*
+dnf -y install mono-complete mc
+echo -e "nice -n 10 /usr/local/bin/lame --preset phone -h -m m /var/spool/asterisk/monitor/\$1" > /usr/lib/asterisk/conv_mp3.sh
+echo -e "rm -f /var/spool/asterisk/monitor/\$1" >> /usr/lib/asterisk/conv_mp3.sh
+chmod 777 /usr/lib/asterisk/conv_mp3.sh
+postgresql-setup --initdb
+systemctl start postgresql
+systemctl enable postgresql
+
+su -c "psql -d postgres -c \"CREATE ROLE callproadmin LOGIN ENCRYPTED PASSWORD 'md590dd535ee60b5c53be83ce36915873e2' SUPERUSER INHERIT NOCREATEDB NOCREATEROLE REPLICATION;\"" postgres
+su -c "psql -d postgres -c \"CREATE ROLE gravador LOGIN ENCRYPTED PASSWORD 'md56c7506e8717c4c44786600be925f2bc3' SUPERUSER NOINHERIT NOCREATEDB NOCREATEROLE NOREPLICATION;\"" postgres
+su -c "psql -d postgres -c \"CREATE DATABASE callpro WITH OWNER = gravador ENCODING = 'UTF8' TABLESPACE = pg_default LC_COLLATE = 'pt_BR.UTF-8' LC_CTYPE = 'pt_BR.UTF-8' CONNECTION LIMIT = -1;\"" postgres
+su -c "psql -d postgres -c \"CREATE DATABASE gravador WITH OWNER = gravador ENCODING = 'UTF8' TABLESPACE = pg_default LC_COLLATE = 'pt_BR.UTF-8' LC_CTYPE = 'pt_BR.UTF-8' CONNECTION LIMIT = -1;\"" postgres
+
+sed -i 's/\(^#port\).*/\port = 5432/' /var/lib/pgsql/data/postgresql.conf
+sed -i 's/\(^max_connections\).*/\max_connections = 1000/' /var/lib/pgsql/data/postgresql.conf
+export listen_addresses="listen_addresses = '*'"
+sed -i "s/#listen_addresses.*/$listen_addresses/" /var/lib/pgsql/data/postgresql.conf
+sed -i '83 i\host    all             all             0.0.0.0 0.0.0.0         md5' /var/lib/pgsql/data/pg_hba.conf
+tar -xvzf adds/asterisk.tar.gz -C /
+asterisk -rx 'core restart now'
+runuser -l postgres -c "psql callpro < SQL/callpro.sql"
+runuser -l postgres -c "psql gravador < SQL/gravador.sql"
+
+cd /usr/src
+wget https://ufpr.dl.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz
+tar zxvf lame-3.100.tar.gz
+cd lame-3.100
+./configure
+make
+make install
+
+wget --timestamping http://ipbx.agecomnet.com.br/callroute.tar.gz && tar -xvzf callroute.tar.gz -C /
+rm -f callroute.tar.gz
+rm -f /var/agecom/callroute/lame.exe
+cp /usr/local/bin/lame /var/agecom/callroute/lame.exe
+cd /usr/src/asterisk
+mkdir -p /usr/src/asterisk/mp3gain
+cd /usr/src/asterisk/mp3gain
+wget "https://downloads.sourceforge.net/project/mp3gain/mp3gain/1.5.2/mp3gain-1_5_2_r2-src.zip?r=https%3A%2F%2Fwww.google.com.br%2F&ts=1511364598&use_mirror=ufpr"
+unzip mp3*
+make && make install
+rm -f /var/agecom/callroute/mp3gain.exe
+cp /usr/src/asterisk/mp3gain/mp3gain /var/agecom/callroute/mp3gain.exe
+
+
+
+echo -e [Unit] > /etc/systemd/system/callroute.service
+echo -e >> /etc/systemd/system/callroute.service
+echo -e Description=Callrouting Service>> /etc/systemd/system/callroute.service
+echo -e After=freepbx.service>> /etc/systemd/system/callroute.service
+echo -e >> /etc/systemd/system/callroute.service
+echo -e [Service]>> /etc/systemd/system/callroute.service
+echo -e Type=simple>> /etc/systemd/system/callroute.service
+echo -e User=root>> /etc/systemd/system/callroute.service
+echo -e ExecStart=/var/agecom/callroute/start_callroute.sh>> /etc/systemd/system/callroute.service
+echo -e Restart=on-abort>> /etc/systemd/system/callroute.service
+echo -e >> /etc/systemd/system/callroute.service
+echo -e >> /etc/systemd/system/callroute.service
+echo -e [Install]>> /etc/systemd/system/callroute.service
+echo -e WantedBy=multi-user.target>> /etc/systemd/system/callroute.service
+systemctl enable callroute.service
+cp -f /usr/local/bin/lame /var/agecom/callroute/lame.exe
+
+systemctl restart postgresql
+}
 installdeps()
 {
 	yum -y install epel-release
@@ -260,24 +330,22 @@ EOF
 }
 configsegurancafpbx()
 {
-/usr/bin/mysql -p$1 asterisk << EOF update asterisk.featurecodes set enabled='0',defaultcode=' ',customcode=' ' where featurename='blindxfer'";
-update soundlang_settings set formats='g722,g729,ulaw',language='pt_BR '";
-insert into soundlang_customlangs (language,description)values('pt_BR','Brazil')";
+mysql -pAgecom20402040 asterisk << EOF update asterisk.featurecodes set enabled='0',defaultcode=' ',customcode=' ' where featurename='blindxfer'; update soundlang_settings set value='g722,g729,ulaw' where keyword='formats';update soundlang_settings set value= 'pt_BR' where keyword='language'; insert into soundlang_customlangs \(language,description\) values \('pt_BR','Brazil'\);
 EOF
-/usr/bin/mysql -p$1 asteriskcdr << EOF 
-CREATE USER 'coletor'@'%' IDENTIFIED BY 'Agecom20402040'";
-GRANT ALL PRIVILEGES ON . TO 'coletor'@'%'";
-FLUSH PRIVILEGES";
-ALTER TABLE asteriskcdrdb.cdr ADD COLUMN coletado boolean" ;
-update asteriskcdrdb.cdr set coletado=False";
-ALTER TABLE asteriskcdrdb.cdr ALTER COLUMN coletado SET DEFAULT false";
-GRANT ALL PRIVILEGES ON asteriskcdrdb.* TO coletor@'%' IDENTIFIED BY 'Agecom20402040'";
-CREATE INDEX idx_channel ON cdr (channel)";
-CREATE INDEX idx_coletado ON cdr (coletado )";
-CREATE INDEX idx_calldate ON cdr (calldate)";
-CREATE TABLE troncos (tronco VARCHAR(30),nome VARCHAR(30))";
-CREATE TABLE rml_status (id int, valor TEXT, PRIMARY KEY (id))";
-INSERT INTO rml_status values (0,'')";
+mysql -pAgecom20402040 asteriskcdr << EOF 
+CREATE USER 'coletor'@'%' IDENTIFIED BY 'Agecom20402040';
+GRANT ALL PRIVILEGES ON . TO 'coletor'@'%';
+FLUSH PRIVILEGES;
+ALTER TABLE asteriskcdrdb.cdr ADD COLUMN coletado boolean;
+update asteriskcdrdb.cdr set coletado=False;
+ALTER TABLE asteriskcdrdb.cdr ALTER COLUMN coletado SET DEFAULT false;
+GRANT ALL PRIVILEGES ON asteriskcdrdb.* TO coletor@'%' IDENTIFIED BY 'Agecom20402040';
+CREATE INDEX idx_channel ON cdr (channel);
+CREATE INDEX idx_coletado ON cdr (coletado );
+CREATE INDEX idx_calldate ON cdr (calldate);
+CREATE TABLE troncos (tronco VARCHAR(30),nome VARCHAR(30));
+CREATE TABLE rml_status (id int, valor TEXT, PRIMARY KEY (id));
+INSERT INTO rml_status values (0,'');
 EOF
 }
 setdosasynprotection()
@@ -458,7 +526,7 @@ case "$1" in
 		installasterisk
 		;;
 	installcr)
-		installasterisk
+		installcr
                 ;;
 	iptables)
 		configiptables
