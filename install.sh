@@ -40,7 +40,7 @@ sysprep()
         fi
         dnf -y install lynx tftp-server unixODBC mariadb-server mariadb mariadb-connector-odbc httpd ncurses-devel sendmail sendmail-cf newt-devel libxml2-devel libcurl-devel libtiff-devel gtk2-devel subversion git wget vim sqlite-devel net-tools gnutls-devel texinfo libuuid-devel libedit-devel tar crontabs gcc gcc-c++ openssl-devel openssl-perl openssl-pkcs11 mysql-devel libxslt-devel kernel-devel fail2ban postfix mod_ssl nodejs
         if [ $centosversion -eq "8" ] ; then
-                        dnf install unixODBC-devel libogg-devel libvorbis-devel uuid-devel libtool-ltdl-devel libsrtp-devel libtermcap-devel libtiff-tools
+                        dnf -y install unixODBC-devel libogg-devel libvorbis-devel uuid-devel libtool-ltdl-devel libsrtp-devel libtermcap-devel libtiff-tools
         fi
 
         dnf -y remove php*
@@ -126,11 +126,11 @@ rm -f asterisk-*-current.tar.gz
                         * ) echo "RESPONDA sim ou nao.";;
                 esac
         done
-wget  -t 1 --timeout=30 --timestamping http://downloads.asterisk.org/pub/telephony/asterisk/asterisk-18-current.tar.gz
+cd /usr/src/asterisk
+wget -t 3 -timeout=30 -timestamp http://downloads.asterisk.org/pub/telephony/asterisk/asterisk-18-current.tar.gz
 dnf -y install jansson
 cd /usr/src/asterisk
 tar xvfz asterisk-18-current.tar.gz
-rm -f asterisk-*-current.tar.gz
 cd asterisk-*/
 contrib/scripts/install_prereq install
 ./configure --with-jansson-bundled --libdir=/usr/lib64
@@ -175,13 +175,23 @@ cd freepbx
 ./start_asterisk start
 ./install --force --no-interaction
 fwconsole ma upgradeall
+set +e
 fwconsole ma download versionupgrade
 fwconsole ma enable versionupgrade
 fwconsole ma install versionupgrade
-fwconsole ma downloadinstall soundlang weakpasswords ringgroups sipsettings recordings queues parking music iaxsettings featurecodeadmin conferences bulkhandler backup callforward callrecording callwaiting core framework dashboard donotdisturb logfiles;fwconsole r; fwconsole ma upgradeall; fwconsole r; fwconsole chown ;fwconsole versionupgrade --upgrade;fwconsole r
+set -e
+fwconsole ma downloadinstall soundlang weakpasswords ringgroups sipsettings recordings queues parking music iaxsettings featurecodeadmin conferences bulkhandler backup callforward callrecording callwaiting core framework dashboard donotdisturb logfiles;fwconsole r; fwconsole ma upgradeall; fwconsole r; fwconsole chown 
+set +e
+fwconsole versionupgrade --upgrade;fwconsole r
 fwconsole ma upgradeall
+set -e
 fwconsole setting SIGNATURECHECK 0
 fwconsole setting LAUNCH_AGI_AS_FASTAGI 0
+fwconsole setting FREEPBX_SYSTEM_IDENT $HOSTNAME
+fwconsole setting RSSFEEDS ""
+fwconsole setting PHPTIMEZONE America/Sao_Paulo
+fwconsole setting UIDEFAULTLANG pt_BR
+
 mysqladmin -u root password 'Agecom20402040'
 echo -e "[Unit]" > /usr/lib/systemd/system/freepbx.service
 echo -e "Description=FreePBX VoIP Server" >> /usr/lib/systemd/system/freepbx.service
