@@ -336,6 +336,8 @@ configsegurancafpbx()
 mysql -pAgecom20402040 asterisk << EOF
 update asterisk.featurecodes set enabled='0',defaultcode=' ',customcode=' ' where featurename='blindxfer'; update soundlang_settings set value='g722,g729,ulaw' where keyword='formats';update soundlang_settings set value= 'pt_BR' where keyword='language'; insert into soundlang_customlangs (language,description) values ('pt_BR','Brazil');
 EOF
+cp -Rf /protecao/asterisk/sounds/* /var/lib/asterisk/sounds/
+
 mysql -pAgecom20402040 asteriskcdrdb < /protecao/SQL/freepbx.sql
 }
 setdosasynprotection()
