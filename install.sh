@@ -35,7 +35,7 @@ sysprep()
         timedatectl set-timezone America/Sao_Paulo
         dnf -y install epel-release
         dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-$centosversion.noarch.rpm
-        dnf -y install dnf-plugins-core
+        dnf -y install dnf-plugins-core mc
         if [ $centosversion -eq "8" ] ; then
                         yum config-manager --set-enabled powertools
         fi
