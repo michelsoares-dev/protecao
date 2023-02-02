@@ -547,7 +547,7 @@ case "$1" in
 	configsegurancafpbx)
 		configsegurancafpbx
 		;;
-	cleansys)
+	clean)
 		cleansys
 		;;
 	'')
