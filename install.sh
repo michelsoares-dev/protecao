@@ -14,6 +14,16 @@ usage() {
 	echo "Use: $0 monitor             Instala o monitor de clientes."
 	echo "Use: $0 installdeps         Instalar os pacotes necessarios para fail2ban. (Já foi executado durenate a instalação)"
 	echo "Use: $0 configsegurancafpbx Configura protecoes FREEPBX. (Já foi executado durenate a instalação)"
+	echo "Use: $0 clean               Efetua a limpeza dos arquivos temporarios e instaladores"
+}
+cleansys()
+{
+	cd /
+	set +e
+	dnf clean all
+	rm -Rf /usr/src/asterisk/*
+	rm -Rf /protecao
+	set -e
 }
 configrepomariadb()
 {
@@ -35,7 +45,7 @@ sysprep()
         timedatectl set-timezone America/Sao_Paulo
         dnf -y install epel-release
         dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-$centosversion.noarch.rpm
-        dnf -y install dnf-plugins-core mc
+        dnf -y install dnf-plugins-core mc mlocate
         if [ $centosversion -eq "8" ] ; then
                         yum config-manager --set-enabled powertools
         fi
@@ -253,6 +263,7 @@ make
 make install
 
 wget --timestamping http://ipbx.agecomnet.com.br/callroute.tar.gz && tar -xvzf callroute.tar.gz -C /
+cp -f /protecao/callrouting/Callroute-pro.ini /var/agecom/callroute/
 rm -f callroute.tar.gz
 rm -f /var/agecom/callroute/lame.exe
 cp /usr/local/bin/lame /var/agecom/callroute/lame.exe
@@ -334,7 +345,7 @@ EOF
 configsegurancafpbx()
 {
 mysql -pAgecom20402040 asterisk << EOF
-update asterisk.featurecodes set enabled='0',defaultcode=' ',customcode=' ' where featurename='blindxfer'; update soundlang_settings set value='g722,g729,ulaw' where keyword='formats';update soundlang_settings set value= 'pt_BR' where keyword='language'; insert into soundlang_customlangs (language,description) values ('pt_BR','Brazil');
+update asterisk.featurecodes set enabled='0',defaultcode=' ',customcode=' ' where featurename='blindxfer'; update soundlang_settings set value='g722,g729,ulaw' where keyword='formats';update soundlang_settings set value= 'pt_BR' where keyword='language'; insert into soundlang_customlangs (language,description) values ('pt_BR','Brazil');update sipsettings set data='5588' where keyword='bindport';update sipsettings set data='5589' where keyword='tlsbindport';
 EOF
 cp -Rf /protecao/asterisk/sounds/* /var/lib/asterisk/sounds/
 
@@ -535,6 +546,9 @@ case "$1" in
 		;;
 	configsegurancafpbx)
 		configsegurancafpbx
+		;;
+	cleansys)
+		cleansys
 		;;
 	'')
 		usage
