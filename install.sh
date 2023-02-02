@@ -23,6 +23,7 @@ cleansys()
 	dnf clean all
 	rm -Rf /usr/src/asterisk/*
 	rm -Rf /protecao
+	rm -f /var/www/html/admin/modules/_cache/*
 	set -e
 }
 configrepomariadb()
