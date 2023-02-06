@@ -197,7 +197,7 @@ fwconsole ma downloadinstall soundlang weakpasswords ringgroups sipsettings reco
 set +e
 fwconsole versionupgrade --upgrade;fwconsole r
 fwconsole ma upgradeall
-set -e
+
 fwconsole setting SIGNATURECHECK 0
 fwconsole setting LAUNCH_AGI_AS_FASTAGI 0
 fwconsole setting FREEPBX_SYSTEM_IDENT $HOSTNAME
@@ -226,6 +226,7 @@ systemctl disable asterisk
 systemctl enable freepbx
 systemctl enable httpd
 fwconsole reload
+set -e
 }
 
 installcr()
