@@ -21,7 +21,7 @@ cleansys()
 	cd /
 	set +e
 	dnf clean all
-	rm -Rf /usr/src/asterisk/*
+	rm -Rf /usr/src/asterisk/freepbx*
 	rm -Rf /protecao
 	rm -f /var/www/html/admin/modules/_cache/*
 	set -e
@@ -211,7 +211,7 @@ fwconsole setting ASTSIPDRIVER both
 mysqladmin -u root password 'Agecom20402040'
 configsegurancafpbx Agecom20402040
 echo -e "[Unit]" > /usr/lib/systemd/system/freepbx.service
-echo -e "Description=FreePBX VoIP Server" >> /usr/lib/systemd/system/freepbx.service
+echo -e "Description=IPBX VoIP Server" >> /usr/lib/systemd/system/freepbx.service
 echo -e "After=mariadb.service" >> /usr/lib/systemd/system/freepbx.service
 echo -e "" >> /usr/lib/systemd/system/freepbx.service
 echo -e "[Service]" >> /usr/lib/systemd/system/freepbx.service
