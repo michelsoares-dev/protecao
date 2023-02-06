@@ -24,7 +24,7 @@ logpath = /var/log/secure
 #action = iptables-allports[name=ssh, protocol=all]
 
 [freepbx]
-enabled = false
+enabled = true
 filter = freepbx
 #action = iptables-allports[name=SIP, protocol=all]
 logpath = /var/log/asterisk/freepbx_security.log
@@ -32,6 +32,6 @@ maxretry = 2
 
 [asterisk]
 
-enable = false
+enable = true
 logpath  = /var/log/asterisk/security
 maxretry = 4
