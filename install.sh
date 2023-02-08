@@ -84,8 +84,9 @@ set +e
         dnf remove firewalld -y
 	systemctl enable mariadb
 	systemctl start mariadb
+	sed -i s/SELINUX=enforcing/SELINUX=disabled/g /etc/selinux/config
 set -e
-sed -i s/SELINUX=enforcing/SELINUX=disabled/g /etc/selinux/config
+
         while true; do
                 read -p "Preparacao do sistema finalizada. Deseja reiniciar o sistema agora? " preboot
                 case $preboot in
