@@ -50,7 +50,7 @@ sysprep()
 	localectl set-locale LANG=pt_BR.UTF-8
         dnf -y install epel-release
         dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-$centosversion.noarch.rpm
-        dnf -y install dnf-plugins-core mc mlocate
+        dnf -y install dnf-plugins-core mc mlocate esmtp-local-delivery
         if [ $centosversion -eq "8" ] ; then
                         yum config-manager --set-enabled powertools
         fi
