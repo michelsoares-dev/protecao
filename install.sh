@@ -418,6 +418,7 @@ setiptablesfile()
 		echo -e "# Porta PostgreSQL" >> /etc/sysconfig/iptables
 		echo -e "-A INPUT -p tcp -m tcp --dport 5432 -j ACCEPT" >> /etc/sysconfig/iptables
 		echo -e "# Portas Callrouting" >> /etc/sysconfig/iptables
+		echo -e "-A INPUT -p tcp -m tcp --dport $callroutingxmlrpc -j ACCEPT" >> /etc/sysconfig/iptables
 		for i in "${callroutingports[@]}"
 		do :
 			echo -e "-A INPUT -p tcp -m tcp --dport $i -j ACCEPT" >> /etc/sysconfig/iptables
@@ -482,6 +483,7 @@ configiptables()
 	then
 
 		callroutingports=$(grep -i 'port =' /var/agecom/callroute/Callroute-pro.ini | grep -v '^Manager' | cut -d "=" -f2 | sed -e 's/^[[:space:]]*//')
+		callroutingxmlrpc=$(grep XMLRPC /var/agecom/callroute/Callroute-pro.ini | cut -d "=" -f2| sed -e 's/^[[:space:]]*//')
 	fi
 	readarray -t callroutingports <<<"$callroutingports"
 
