@@ -31,7 +31,6 @@ logpath = /var/log/asterisk/freepbx_security.log
 maxretry = 2
 
 [asterisk]
-
-enable = true
+enabled = true
 logpath  = /var/log/asterisk/security
 maxretry = 4
