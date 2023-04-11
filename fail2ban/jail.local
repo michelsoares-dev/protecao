@@ -32,5 +32,6 @@ maxretry = 2
 
 [asterisk]
 enabled = true
+filter = asterisk
 logpath  = /var/log/asterisk/security
 maxretry = 4
